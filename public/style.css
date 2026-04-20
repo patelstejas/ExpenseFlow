@@ -241,19 +241,74 @@ button[type="submit"]:hover { background: var(--accent-hover); }
   white-space: nowrap;
 }
 
-.delete-btn {
+.card-actions {
+  display: flex;
+  gap: 0.2rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.expense-card:hover .card-actions { opacity: 1; }
+
+.edit-btn, .delete-btn {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 5px;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   padding: 0.1rem 0.35rem;
   transition: all 0.15s;
   line-height: 1.4;
 }
 
-.delete-btn:hover { border-color: var(--danger); color: var(--danger); }
+.edit-btn:hover   { border-color: var(--accent); color: var(--accent); }
+.delete-btn:hover { border-color: var(--danger);  color: var(--danger); }
+
+/* ── Inline edit card ── */
+.expense-card--editing { display: block; }
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.edit-desc { grid-column: 1 / -1; }
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.save-btn:hover { background: var(--accent-hover); }
+
+.cancel-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cancel-btn:hover { border-color: var(--text-muted); color: var(--text); }
 
 .empty-state {
   text-align: center;

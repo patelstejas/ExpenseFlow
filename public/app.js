@@ -2,6 +2,7 @@ const CATEGORIES = ['Food', 'Rent', 'Fun', 'Transport', 'Other'];
 
 let expenses = [];
 let activeFilter = 'All';
+let editingId = null;
 
 function fmt(amount) {
   return `$${Number(amount).toFixed(2)}`;
@@ -19,6 +20,52 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function toDateInputValue(iso) {
+  return iso.slice(0, 10);
+}
+
+function renderCard(e) {
+  return `
+    <div class="expense-card">
+      <div>
+        <div class="expense-meta">
+          <span class="expense-desc">${escapeHtml(e.description)}</span>
+          <span class="category-badge cat-${e.category}">${e.category}</span>
+        </div>
+        <span class="expense-date">${fmtDate(e.date)}</span>
+      </div>
+      <div class="expense-right">
+        <span class="expense-amount">${fmt(e.amount)}</span>
+        <div class="card-actions">
+          <button class="edit-btn" data-id="${e.id}" aria-label="Edit expense">&#9998;</button>
+          <button class="delete-btn" data-id="${e.id}" aria-label="Delete expense">&#x2715;</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEditCard(e) {
+  const opts = CATEGORIES.map(c =>
+    `<option value="${c}"${c === e.category ? ' selected' : ''}>${c}</option>`
+  ).join('');
+
+  return `
+    <div class="expense-card expense-card--editing">
+      <div class="edit-grid">
+        <input class="edit-input edit-desc" data-field="description" value="${escapeHtml(e.description)}" placeholder="Description">
+        <input class="edit-input" data-field="amount" type="number" min="0.01" step="0.01" value="${e.amount}">
+        <select class="edit-input" data-field="category">${opts}</select>
+        <input class="edit-input" data-field="date" type="date" value="${toDateInputValue(e.date)}">
+      </div>
+      <div class="edit-actions">
+        <button class="cancel-btn">Cancel</button>
+        <button class="save-btn" data-id="${e.id}">Save</button>
+      </div>
+    </div>
+  `;
 }
 
 async function loadExpenses() {
@@ -66,25 +113,46 @@ function renderList() {
     return;
   }
 
-  container.innerHTML = filtered.map(e => `
-    <div class="expense-card">
-      <div>
-        <div class="expense-meta">
-          <span class="expense-desc">${escapeHtml(e.description)}</span>
-          <span class="category-badge cat-${e.category}">${e.category}</span>
-        </div>
-        <span class="expense-date">${fmtDate(e.date)}</span>
-      </div>
-      <div class="expense-right">
-        <span class="expense-amount">${fmt(e.amount)}</span>
-        <button class="delete-btn" data-id="${e.id}" aria-label="Delete expense">&#x2715;</button>
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = filtered.map(e =>
+    e.id === editingId ? renderEditCard(e) : renderCard(e)
+  ).join('');
 
+  container.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => { editingId = btn.dataset.id; renderList(); });
+  });
   container.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', () => deleteExpense(btn.dataset.id));
   });
+  container.querySelectorAll('.save-btn').forEach(btn => {
+    btn.addEventListener('click', () => saveEdit(btn.dataset.id));
+  });
+  container.querySelectorAll('.cancel-btn').forEach(btn => {
+    btn.addEventListener('click', () => { editingId = null; renderList(); });
+  });
+}
+
+async function saveEdit(id) {
+  const card = document.querySelector('.expense-card--editing');
+  const get = field => card.querySelector(`[data-field="${field}"]`).value;
+
+  const res = await fetch(`/api/expenses/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      description: get('description'),
+      amount:      Number(get('amount')),
+      category:    get('category'),
+      date:        get('date'),
+    }),
+  });
+
+  const { data, error } = await res.json();
+  if (error) { alert(error); return; }
+
+  const index = expenses.findIndex(e => e.id === id);
+  expenses[index] = data;
+  editingId = null;
+  render();
 }
 
 async function deleteExpense(id) {

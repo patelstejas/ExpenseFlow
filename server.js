@@ -66,6 +66,46 @@ app.post('/api/expenses', async (req, res) => {
   }
 });
 
+app.put('/api/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, amount, category, date } = req.body;
+
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      return res.status(400).json({ error: 'Description is required' });
+    }
+    if (amount === undefined || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return res.status(400).json({ error: 'Amount must be a positive number' });
+    }
+    if (!VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
+    }
+
+    const expenses = await readExpenses();
+    const index = expenses.findIndex(e => e.id === id);
+
+    if (index === -1) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    expenses[index] = {
+      ...expenses[index],
+      description: description.trim(),
+      amount: Math.round(Number(amount) * 100) / 100,
+      category,
+      date: new Date(date).toISOString(),
+    };
+    await writeExpenses(expenses);
+
+    res.json({ data: expenses[index] });
+  } catch {
+    res.status(500).json({ error: 'Failed to update expense' });
+  }
+});
+
 app.delete('/api/expenses/:id', async (req, res) => {
   try {
     const { id } = req.params;
